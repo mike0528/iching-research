@@ -1,0 +1,6 @@
+{
+  "status": "not_completed",
+  "operation": "NotebookLM source inventory summary",
+  "error": "RPCResponseTooLargeError",
+  "note": "The broad prompt exceeded the NotebookLM response limit. Source inventory was confirmed separately with notebooklm source list --json and recorded in ../sources.md."
+}

@@ -1,0 +1,41 @@
+:root {
+  font-family: 'Noto Serif TC', 'Source Han Serif TC', 'PingFang TC', 'Microsoft JhengHei', serif;
+  color: #26302d;
+  background: #f4f1e9;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --ink: #26302d;
+  --muted: #758078;
+  --paper: #fcfbf7;
+  --paper-deep: #e9e5d9;
+  --moss: #35645c;
+  --moss-dark: #204c47;
+  --cinnabar: #b85f45;
+  --gold: #c8a15a;
+  --line: #d9d6cb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+textarea,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}

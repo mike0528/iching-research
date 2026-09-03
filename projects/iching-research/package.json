@@ -1,0 +1,33 @@
+{
+  "name": "iching-research",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run content:validate && tsc -b && vite build",
+    "lint": "oxlint",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "content:import": "node scripts/extract-content.mjs",
+    "content:validate": "node scripts/validate-content.mjs",
+    "content:compare": "node scripts/compare-content.mjs",
+    "content:apply-review": "node scripts/apply-review-draft.mjs",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.1.0",
+    "oxlint": "^1.79.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
+  }
+}

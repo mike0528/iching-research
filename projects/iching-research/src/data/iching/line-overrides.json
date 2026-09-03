@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "iching-line-overrides-v1",
+  "description": "人工確認後的逐爻欄位覆寫；來源抽取時套用，不取代來源初稿。",
+  "records": {
+    "11-6": {
+      "xiaoxiang": "城復于隍，其命亂也。",
+      "note": "使用者提供並確認的小象。"
+    },
+    "30-6": {
+      "xiaoxiang": "王用出征，以正邦也。",
+      "note": "使用者提供並確認的小象。"
+    }
+  }
+}
