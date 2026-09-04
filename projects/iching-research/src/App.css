@@ -346,6 +346,17 @@ input:focus {
   box-shadow: 0 0 0 3px rgba(53, 100, 92, 0.11);
 }
 
+.setup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.setup-actions .button {
+  flex: 1 1 220px;
+}
+
 .method-card {
   display: flex;
   justify-content: space-between;
@@ -1166,6 +1177,26 @@ input:focus {
   margin: 7px 0 0;
 }
 
+.review-reference {
+  margin: 22px 0;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  background: #f8f6ef;
+}
+
+.review-reference-title {
+  color: var(--muted);
+  font-family: sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.review-reference .hexagram-text {
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
 .review-source {
   max-width: 420px;
   color: var(--muted);
@@ -1465,7 +1496,15 @@ input:focus {
   }
 
   .cast-aside {
-    order: -1;
+    order: 1;
+  }
+
+  .setup-actions {
+    flex-direction: column;
+  }
+
+  .setup-actions .button {
+    width: 100%;
   }
 
   .transition-mark {

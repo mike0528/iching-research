@@ -25,6 +25,7 @@ export interface HexagramText {
   judgment: string
   tuan: string
   greatImage: string
+  commentary?: string
   reviewStatus: ReviewStatus
 }
 
@@ -38,6 +39,7 @@ export interface HexagramLineText {
   name: string
   text: string
   xiaoxiang: string
+  commentary: string
   reviewStatus: ReviewStatus
 }
 

@@ -38,6 +38,18 @@ function sourceLineAt(text, offset) {
   return text.slice(0, offset).split(/\r?\n/u).length
 }
 
+function sectionAfterMarker(lines, markerIndex, endIndex) {
+  if (markerIndex < 0) return ''
+  const parts = [lines[markerIndex].trim().slice(2)]
+  for (let nextIndex = markerIndex + 1; nextIndex < endIndex; nextIndex += 1) {
+    const next = lines[nextIndex].trim()
+    if (next.startsWith('注：') || next.startsWith('象：') || next.startsWith('總論') || lineLabels.test(next)) break
+    const cleaned = cleanLine(next)
+    if (cleaned) parts.push(cleaned)
+  }
+  return parts.join('').trim()
+}
+
 function parseSource(text, sourcePath) {
   const firstHeader = '卦一  乾  乾為天  乾上乾下'
   const contentStart = text.lastIndexOf(firstHeader)
@@ -74,16 +86,9 @@ function parseSource(text, sourcePath) {
       const nextLineIndex = lines.findIndex((line, candidateIndex) => candidateIndex > lineIndex && lineLabels.test(line.trim()))
       const lineEnd = nextLineIndex < 0 ? lines.length : nextLineIndex
       const xiaoxiangIndex = lines.findIndex((line, candidateIndex) => candidateIndex > lineIndex && candidateIndex < lineEnd && line.trim().startsWith('象：'))
-      const xiaoxiangParts = []
-      if (xiaoxiangIndex >= 0) {
-        xiaoxiangParts.push(lines[xiaoxiangIndex].trim().slice(2))
-        for (let nextIndex = xiaoxiangIndex + 1; nextIndex < lineEnd; nextIndex += 1) {
-          const next = lines[nextIndex].trim()
-          if (next.startsWith('注：') || next.startsWith('釋：') || next.startsWith('彖：')) break
-          const cleaned = cleanLine(next)
-          if (cleaned) xiaoxiangParts.push(cleaned)
-        }
-      }
+      const xiaoxiang = sectionAfterMarker(lines, xiaoxiangIndex, lineEnd)
+      const commentaryIndex = lines.findIndex((line, candidateIndex) => candidateIndex > lineIndex && candidateIndex < lineEnd && line.trim().startsWith('注：'))
+      const commentary = sectionAfterMarker(lines, commentaryIndex, lineEnd)
       const id = `${sequence}-${found}`
       const offsetBeforeLine = lines.slice(0, lineIndex).join('\n').length + (lineIndex > 0 ? lineIndex : 0)
       records.set(id, {
@@ -93,7 +98,8 @@ function parseSource(text, sourcePath) {
         position: found,
         name: match[1],
         text: cleanLine(textParts.join('')),
-        xiaoxiang: cleanLine(xiaoxiangParts.join('')),
+        xiaoxiang,
+        commentary,
         sourceLine: sourceLineAt(text, contentStart + blockStart + offsetBeforeLine),
       })
     }
@@ -122,7 +128,7 @@ function compareRecords(docxRecords, pdfRecords) {
     let status = 'match'
     if (!docx) status = 'missing-docx'
     else if (!pdf) status = 'missing-pdf'
-    else if (docx.name !== pdf.name || normalize(docx.text) !== normalize(pdf.text) || normalize(docx.xiaoxiang) !== normalize(pdf.xiaoxiang)) status = 'difference'
+    else if (docx.name !== pdf.name || normalize(docx.text) !== normalize(pdf.text) || normalize(docx.xiaoxiang) !== normalize(pdf.xiaoxiang) || normalize(docx.commentary) !== normalize(pdf.commentary)) status = 'difference'
     return { id, status, docx, pdf }
   })
 }
@@ -156,8 +162,8 @@ function markdownReport(report) {
   lines.push('| ID | 狀態 | DOCX 爻名／爻辭 | PDF 爻名／爻辭 |')
   lines.push('|---|---|---|---|')
   for (const row of rows) {
-    const docx = row.docx ? `${row.docx.name}：${row.docx.text}` : '缺漏'
-    const pdf = row.pdf ? `${row.pdf.name}：${row.pdf.text}` : '缺漏'
+    const docx = row.docx ? `${row.docx.name}：${row.docx.text}｜小象：${row.docx.xiaoxiang || '缺漏'}｜注：${row.docx.commentary || '缺漏'}` : '缺漏'
+    const pdf = row.pdf ? `${row.pdf.name}：${row.pdf.text}｜小象：${row.pdf.xiaoxiang || '缺漏'}｜注：${row.pdf.commentary || '缺漏'}` : '缺漏'
     lines.push(`| ${row.id} | ${row.status} | ${docx.replaceAll('|', '\\|')} | ${pdf.replaceAll('|', '\\|')} |`)
   }
   return `${lines.join('\n')}\n`

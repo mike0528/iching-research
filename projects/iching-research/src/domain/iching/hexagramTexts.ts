@@ -1,7 +1,8 @@
+import hexagramDataset from '../../data/iching/line-records.json'
 import type { HexagramText } from './types'
 
 // 來源初稿：已從參考資料整理，正式上線前仍須逐卦人工校訂。
-export const HEXAGRAM_TEXTS: Record<number, HexagramText> = {
+const HEXAGRAM_SOURCE_TEXTS: Record<number, HexagramText> = {
   1: { judgment: '元亨利貞。', tuan: '大哉乾元，萬物資始，乃統天。雲行雨施，品物流形。大明終始，六位時成，時乘六龍以禦天。乾道變化，各正性命，保合太和，乃利貞。首出庶物，萬國咸寧。', greatImage: '天行健，君子以自強不息。', reviewStatus: '待校訂' },
   2: { judgment: '元亨，利牝馬之貞，君子有攸往，先迷後得主。利西南得朋，東北喪朋，安貞吉。', tuan: '至哉坤元，萬物資生，乃順承天。坤厚載物，德合无疆，含弘光大，品物咸亨。牝馬地類，行地无疆，柔順利貞，君子攸行。先迷失道，後順得常。西南得朋，乃與類行; 東北喪朋，乃終有慶。安貞之吉，應地无疆。', greatImage: '地勢坤，君子以厚德載物。', reviewStatus: '待校訂' },
   3: { judgment: '元亨利貞，勿用有攸往，利建侯。', tuan: '屯，剛柔始交而難生，動乎險中，大亨貞。雷雨之動滿盈，天造草昧，宜建侯而不寧。', greatImage: '雲雷屯，君子以經綸。', reviewStatus: '待校訂' },
@@ -67,3 +68,11 @@ export const HEXAGRAM_TEXTS: Record<number, HexagramText> = {
   63: { judgment: '既濟，亨小，利貞，初吉終亂。', tuan: '既濟亨，小者亨也。利貞，剛柔正而位當也。初吉，柔得中也。終止則亂，其道窮也。', greatImage: '水在火上，既濟。君子以思患而豫防之。', reviewStatus: '待校訂' },
   64: { judgment: '未濟，亨，小狐汔濟，濡其尾，无攸利。', tuan: '未濟亨，柔得中也。小狐汔濟，未出中也。濡其尾，无攸利，不續終也。雖不當位，剛柔應也。', greatImage: '火在水上，未濟。君子以慎辨物居方。', reviewStatus: '待校訂' },
 }
+
+const extractedTexts = (hexagramDataset.hexagramTexts ?? {}) as Record<string, { commentary?: string }>
+export const HEXAGRAM_TEXTS: Record<number, HexagramText> = Object.fromEntries(
+  Object.entries(HEXAGRAM_SOURCE_TEXTS).map(([sequence, text]) => [sequence, {
+    ...text,
+    commentary: extractedTexts[sequence]?.commentary ?? '',
+  }]),
+) as Record<number, HexagramText>

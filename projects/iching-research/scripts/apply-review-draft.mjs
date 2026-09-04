@@ -25,6 +25,7 @@ const records = dataset.records.map((record) => {
     ...record,
     text: typeof item.text === 'string' ? item.text : record.text,
     xiaoxiang: typeof item.xiaoxiang === 'string' ? item.xiaoxiang : record.xiaoxiang,
+    commentary: typeof item.commentary === 'string' ? item.commentary : record.commentary,
     reviewStatus: item.status ?? record.reviewStatus,
     ...(item.note ? { reviewNote: item.note } : {}),
   }

@@ -5,6 +5,7 @@ export const REVIEW_STORAGE_KEY = 'iching-research:line-review-draft'
 export interface ReviewDraftItem {
   text: string
   xiaoxiang: string
+  commentary: string
   status: ReviewStatus
   note: string
 }
@@ -40,6 +41,7 @@ function isReviewDraftItem(value: unknown): value is ReviewDraftItem {
   const item = value as Partial<ReviewDraftItem>
   return typeof item.text === 'string'
     && (item.xiaoxiang === undefined || typeof item.xiaoxiang === 'string')
+    && (item.commentary === undefined || typeof item.commentary === 'string')
     && isReviewStatus(item.status)
     && typeof item.note === 'string'
 }
@@ -55,7 +57,7 @@ export function parseReviewDraft(raw: string | null): ReviewDraft | null {
     if (!Object.values(draft.items).every(isReviewDraftItem)) return null
     const items = Object.fromEntries(Object.entries(draft.items).map(([id, value]) => {
       const item = value as ReviewDraftItem
-      return [id, { ...item, xiaoxiang: item.xiaoxiang ?? '' }]
+      return [id, { ...item, xiaoxiang: item.xiaoxiang ?? '', commentary: item.commentary ?? '' }]
     }))
     return {
       schemaVersion: draft.schemaVersion,

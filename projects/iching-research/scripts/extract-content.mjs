@@ -42,8 +42,25 @@ function sourceLineAt(offset) {
   return input.slice(0, contentStart + offset).split(/\r?\n/).length
 }
 
+function cleanContinuation(value) {
+  return value.replace(/^===== PAGE \d+ =====$/u, '').replace(/建立者\s+Mike Chang\s+\d+$/u, '').trim()
+}
+
+function sectionAfterMarker(lines, markerIndex, endIndex) {
+  if (markerIndex < 0) return ''
+  const parts = [lines[markerIndex].trim().slice(2)]
+  for (let nextIndex = markerIndex + 1; nextIndex < endIndex; nextIndex += 1) {
+    const next = lines[nextIndex].trim()
+    if (next.startsWith('注：') || next.startsWith('象：') || next.startsWith('總論') || lineLabels.test(next)) break
+    const cleaned = cleanContinuation(next)
+    if (cleaned) parts.push(cleaned)
+  }
+  return parts.join('').trim()
+}
+
 const records = []
 const specialLines = []
+const hexagramTexts = {}
 for (let index = 0; index < headers.length; index += 1) {
   const header = headers[index]
   const nextStart = index + 1 < headers.length ? headers[index + 1].index : content.length
@@ -53,6 +70,12 @@ for (let index = 0; index < headers.length; index += 1) {
   const hexagramName = headerParts[1]
   const lines = block.split(/\r?\n/)
   const found = []
+  const firstLineIndex = lines.findIndex((line) => lineLabels.test(line.trim()))
+  const hexagramCommentaryIndex = lines.findIndex((line, lineIndex) => lineIndex < firstLineIndex && line.trim().startsWith('注：'))
+  hexagramTexts[sequence] = {
+    commentary: sectionAfterMarker(lines, hexagramCommentaryIndex, firstLineIndex < 0 ? lines.length : firstLineIndex),
+    sourceLine: hexagramCommentaryIndex >= 0 ? sourceLineAt(header.index + header[0].length + block.slice(0, lines.slice(0, hexagramCommentaryIndex + 1).join('\\n').length).length) : null,
+  }
 
   for (let lineIndex = 0; lineIndex < lines.length && found.length < 6; lineIndex += 1) {
     const match = lines[lineIndex].trim().match(lineLabels)
@@ -61,21 +84,15 @@ for (let index = 0; index < headers.length; index += 1) {
     const nextLineIndex = lines.findIndex((line, candidateIndex) => candidateIndex > lineIndex && lineLabels.test(line.trim()))
     const lineEnd = nextLineIndex < 0 ? lines.length : nextLineIndex
     const xiaoxiangIndex = lines.findIndex((line, candidateIndex) => candidateIndex > lineIndex && candidateIndex < lineEnd && line.trim().startsWith('象：'))
-    const xiaoxiangParts = []
-    if (xiaoxiangIndex >= 0) {
-      xiaoxiangParts.push(lines[xiaoxiangIndex].trim().slice(2))
-      for (let nextIndex = xiaoxiangIndex + 1; nextIndex < lineEnd; nextIndex += 1) {
-        const next = lines[nextIndex].trim()
-        if (next.startsWith('注：') || next.startsWith('釋：') || next.startsWith('彖：')) break
-        const cleaned = next.replace(/^===== PAGE \d+ =====$/u, '').replace(/建立者\s+Mike Chang\s+\d+$/u, '').trim()
-        if (cleaned) xiaoxiangParts.push(cleaned)
-      }
-    }
+    const xiaoxiang = sectionAfterMarker(lines, xiaoxiangIndex, lineEnd)
+    const commentaryIndex = lines.findIndex((line, candidateIndex) => candidateIndex > lineIndex && candidateIndex < lineEnd && line.trim().startsWith('注：'))
+    const commentary = sectionAfterMarker(lines, commentaryIndex, lineEnd)
     found.push({
       position: found.length + 1,
       name: match[1],
       text: match[2].trim(),
-      xiaoxiang: xiaoxiangParts.join('').trim(),
+      xiaoxiang,
+      commentary,
       sourceLine: sourceLineAt(header.index + header[0].length + block.slice(0, lines.slice(0, lineIndex + 1).join('\n').length).length),
     })
   }
@@ -93,6 +110,7 @@ for (let index = 0; index < headers.length; index += 1) {
       name: line.name,
       text: override.text ?? line.text,
       xiaoxiang: override.xiaoxiang ?? line.xiaoxiang,
+      commentary: override.commentary ?? line.commentary,
       reviewStatus: override.status ?? '待校訂',
       ...(override.note ? { reviewNote: override.note } : {}),
       sourceRef: { sourcePath, sourceLine: line.sourceLine },
@@ -122,6 +140,7 @@ const dataset = {
   },
   records,
   specialLines,
+  hexagramTexts,
 }
 
 await mkdir(dirname(outputPath), { recursive: true })

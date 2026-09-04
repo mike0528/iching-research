@@ -40,13 +40,26 @@ test.describe('觀象核心使用流程', () => {
     for (let index = 0; index < await changingCards.count(); index += 1) {
       await expect(changingCards.nth(index).locator('h3', { hasText: '本卦爻辭' })).toBeVisible()
       await expect(changingCards.nth(index).locator('h3', { hasText: '小象' })).toBeVisible()
+      await expect(changingCards.nth(index).locator('h3', { hasText: '注' })).toBeVisible()
     }
+
+    await page.getByRole('button', { name: /重新起卦/ }).click()
+    await expect(page).toHaveURL(/#\/setup$/)
+    await page.getByRole('textbox', { name: /這次想研究的問題/ }).fill('E2E 快速完成')
+    await page.getByRole('button', { name: '六爻全部一次產生', exact: true }).click()
+    await expect(page).toHaveURL(/#\/cast$/)
+    await expect(page.getByRole('button', { name: /查看卦象結果/ })).toBeVisible()
+    await expect(page.locator('.mini-lines .line-position')).toHaveText(['上', '5', '4', '3', '2', '初'])
   })
 
   test('六十四卦索引、詳細頁與前後卦導覽', async ({ page }) => {
     await goTo(page, '#/hexagrams')
     await expect(page.getByRole('heading', { name: /六十四卦/ })).toBeVisible()
     await expect(page.locator('.hexagram-tile')).toHaveCount(64)
+    await page.getByRole('textbox', { name: /搜尋卦序、卦名、上下卦或卦象/ }).fill('雷風')
+    await expect(page.locator('.hexagram-tile')).toHaveCount(1)
+    await expect(page.locator('.hexagram-tile')).toContainText('恒')
+    await page.getByRole('textbox', { name: /搜尋卦序、卦名、上下卦或卦象/ }).fill('')
 
     await page.locator('.hexagram-tile').first().click()
     await expect(page).toHaveURL(/#\/hexagrams\/1$/)
@@ -68,6 +81,7 @@ test.describe('觀象核心使用流程', () => {
     await expect(page.getByRole('heading', { name: /逐爻校訂/ })).toBeVisible()
     await expect(page.locator('textarea[id^="review-text-"]')).toHaveCount(384)
     await expect(page.locator('textarea[id^="review-xiaoxiang-"]')).toHaveCount(384)
+    await expect(page.locator('textarea[id^="review-commentary-"]')).toHaveCount(384)
 
     await page.getByRole('textbox', { name: /搜尋卦序、卦名、爻辭或小象/ }).fill('城復于隍')
     await expect(page.locator('.review-record')).toHaveCount(1)
@@ -76,5 +90,11 @@ test.describe('觀象核心使用流程', () => {
     await page.getByRole('textbox', { name: /搜尋卦序、卦名、爻辭或小象/ }).fill('')
     await expect(page.locator('.review-record')).toHaveCount(384)
     expect(await page.evaluate(() => document.body.scrollWidth)).toBeLessThanOrEqual(375)
+
+    await goTo(page, '#/setup')
+    await page.getByRole('button', { name: /開始第 1 爻/ }).click()
+    const operationBox = await page.locator('.operation-panel').boundingBox()
+    const asideBox = await page.locator('.cast-aside').boundingBox()
+    expect(asideBox?.y).toBeGreaterThan(operationBox?.y ?? 0)
   })
 })

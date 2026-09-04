@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { changedLines, getHexagram, HEXAGRAMS, TRIGRAM_BITS } from './hexagrams'
+import { changedLines, getHexagram, HEXAGRAMS, TRIGRAM_BITS, trigramLabel } from './hexagrams'
 import { HEXAGRAM_LINE_RECORDS, HEXAGRAM_LINE_TEXTS, SPECIAL_LINE_RECORDS } from './hexagramLineTexts'
 import { HEXAGRAM_TEXTS } from './hexagramTexts'
 import { analyzeLines } from './relationships'
@@ -70,6 +70,15 @@ describe('hexagram and structural analysis', () => {
     }
   })
 
+  it('keeps Xun and Dui trigrams distinct in both mapping and display labels', () => {
+    const xun = TRIGRAM_BITS['巽'].split('').map((bit) => bit === '1' ? 7 : 8) as LineValue[]
+    const dui = TRIGRAM_BITS['兌'].split('').map((bit) => bit === '1' ? 7 : 8) as LineValue[]
+    expect(getHexagram([...xun, ...xun])).toMatchObject({ name: '巽', upper: '巽', lower: '巽' })
+    expect(getHexagram([...dui, ...dui])).toMatchObject({ name: '兌', upper: '兌', lower: '兌' })
+    expect(trigramLabel('巽')).toBe('風')
+    expect(trigramLabel('兌')).toBe('澤')
+  })
+
   it('provides judgment, tuan, and great image text for every hexagram', () => {
     expect(Object.keys(HEXAGRAM_TEXTS)).toHaveLength(64)
     for (const sequence of HEXAGRAMS.map((hexagram) => hexagram.sequence)) {
@@ -77,6 +86,7 @@ describe('hexagram and structural analysis', () => {
       expect(text.judgment.length).toBeGreaterThan(0)
       expect(text.tuan.length).toBeGreaterThan(0)
       expect(text.greatImage.length).toBeGreaterThan(0)
+      expect(text.commentary?.length).toBeGreaterThan(0)
       expect(text.reviewStatus).toBe('待校訂')
     }
   })
@@ -91,7 +101,7 @@ describe('hexagram and structural analysis', () => {
       const lines = HEXAGRAM_LINE_TEXTS[sequence]
       expect(lines).toHaveLength(6)
       expect(lines.map((line) => line.position)).toEqual([1, 2, 3, 4, 5, 6])
-      expect(lines.every((line) => line.text.length > 0 && typeof line.xiaoxiang === 'string' && line.reviewStatus === '待校訂' && line.sourceRef.sourcePath.length > 0)).toBe(true)
+      expect(lines.every((line) => line.text.length > 0 && typeof line.xiaoxiang === 'string' && typeof line.commentary === 'string' && line.reviewStatus === '待校訂' && line.sourceRef.sourcePath.length > 0)).toBe(true)
     }
     expect(HEXAGRAM_LINE_RECORDS.filter((line) => !line.xiaoxiang).map((line) => line.id)).toEqual([])
   })
