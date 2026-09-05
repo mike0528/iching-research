@@ -41,6 +41,7 @@ export interface HexagramLineText {
   xiaoxiang: string
   commentary: string
   reviewStatus: ReviewStatus
+  reviewNote?: string
 }
 
 export interface HexagramLineRecord extends HexagramLineText {

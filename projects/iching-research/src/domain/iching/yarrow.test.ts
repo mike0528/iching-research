@@ -71,6 +71,8 @@ describe('hexagram and structural analysis', () => {
   })
 
   it('keeps Xun and Dui trigrams distinct in both mapping and display labels', () => {
+    expect(TRIGRAM_BITS['巽']).toBe('011')
+    expect(TRIGRAM_BITS['兌']).toBe('110')
     const xun = TRIGRAM_BITS['巽'].split('').map((bit) => bit === '1' ? 7 : 8) as LineValue[]
     const dui = TRIGRAM_BITS['兌'].split('').map((bit) => bit === '1' ? 7 : 8) as LineValue[]
     expect(getHexagram([...xun, ...xun])).toMatchObject({ name: '巽', upper: '巽', lower: '巽' })

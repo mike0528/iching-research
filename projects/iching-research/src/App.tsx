@@ -113,7 +113,7 @@ function SetupView({ onStart, onComplete }: { onStart: (question: string) => voi
         </div>
         <div className="info-callout">
           <strong>這會怎麼進行？</strong>
-          <p>每一變會依序經過四營。你可以逐步查看，也可以使用「自動完成本變」快速完成目前這一變。</p>
+          <p>每一變會依序經過四營。你可以逐步查看，也可以使用「自動完成本變」快速完成目前這一變；也可以在此直接選擇「六爻全部一次產生」。</p>
         </div>
         <div className="setup-actions"><PrimaryButton onClick={() => onStart(question)}>開始第 1 爻 <span aria-hidden="true">→</span></PrimaryButton><SecondaryButton onClick={() => onComplete(question)}>六爻全部一次產生</SecondaryButton></div>
       </section>
@@ -162,11 +162,10 @@ function CastProgress({ state }: { state: CastState }) {
   )
 }
 
-function CastView({ state, onNext, onAuto, onComplete, onBack, onRestart, onResult }: {
+function CastView({ state, onNext, onAuto, onBack, onRestart, onResult }: {
   state: CastState
   onNext: () => void
   onAuto: () => void
-  onComplete: () => void
   onBack: () => void
   onRestart: () => void
   onResult: () => void
@@ -212,7 +211,6 @@ function CastView({ state, onNext, onAuto, onComplete, onBack, onRestart, onResu
           <div className="operation-actions">
             <PrimaryButton onClick={onNext}>{!active ? '執行分二' : state.stage === 3 ? '完成本變' : `執行${OPERATION_LABELS[state.stage + 1]}`} <span aria-hidden="true">→</span></PrimaryButton>
             <SecondaryButton onClick={onAuto}>自動完成本變</SecondaryButton>
-            <SecondaryButton onClick={onComplete}>六爻全部一次產生</SecondaryButton>
           </div>
           <div className="secondary-actions">
             <button type="button" onClick={onBack} disabled={state.history.length === 0}>← 返回上一步</button>
@@ -261,20 +259,6 @@ function HexagramTextBlock({ sequence }: { sequence: number }) {
   )
 }
 
-function LineTextSection({ sequence }: { sequence: number }) {
-  const lines = HEXAGRAM_LINE_TEXTS[sequence] ?? []
-
-  return (
-    <section className="result-section line-text-section">
-      <div className="section-heading"><div><div className="eyebrow">STRUCTURE / 01</div><h2>各爻爻辭</h2></div><span>本卦六爻</span></div>
-      <p className="section-intro">依初爻至上爻列出本卦爻辭；內容目前仍以來源初稿保存。</p>
-      <div className="line-text-list">
-        {[...lines].reverse().map((line) => <article className="line-text-row" key={line.position}><div className="line-text-meta"><strong>{line.name}</strong><span>第 {line.position} 爻</span></div><p>{line.text}</p><small>內容狀態：{line.reviewStatus}</small></article>)}
-      </div>
-    </section>
-  )
-}
-
 function ResultView({ state, question, onRestart, onBrowse, onOpenDetail }: { state: CastState; question: string; onRestart: () => void; onBrowse: () => void; onOpenDetail: (sequence: number) => void }) {
   const values = state.completedLines.map((line) => line.value) as LineValue[]
   const result = useMemo(() => {
@@ -317,7 +301,6 @@ function ResultView({ state, question, onRestart, onBrowse, onOpenDetail }: { st
           <button className="text-button detail-link" type="button" onClick={() => onOpenDetail(result.transformed.sequence)}>開啟之卦詳細頁 ↗</button>
         </article>
       </section>
-      <div className="result-detail-grid">
       <section className="result-section structure-section">
         <div className="section-heading"><div><div className="eyebrow">STRUCTURE / 01</div><h2>六爻結構</h2></div><span className="change-badge">{changingCount} 個變爻</span></div>
         <p className="section-intro">本卦由下往上讀。變爻以「動」標示；以下標籤是結構描述，不是個人化判斷。</p>
@@ -339,8 +322,6 @@ function ResultView({ state, question, onRestart, onBrowse, onOpenDetail }: { st
         </div>
         <details className="rule-details"><summary>這些結構標籤代表什麼？</summary><div className="rule-copy"><p><strong>得位／失位</strong>：初、三、五為陽位；二、四、上為陰位，依爻的陰陽判斷是否相合。</p><p><strong>得中</strong>：二爻與五爻是上下卦的中位，與得位分開計算。</p><p><strong>正應</strong>：初／四、二／五、三／上為對應位置；本版先顯示陰陽相異的正應。</p><p><strong>承陽／乘剛</strong>：一般相鄰陰陽規則 v1 中，陰爻下方的陽爻為乘剛，陰爻上方的陽爻為承陽；卦例特殊取象尚待另行研究。</p></div></details>
       </section>
-      <LineTextSection sequence={result.original.sequence} />
-      </div>
       <section className="result-section changing-section">
         <div className="section-heading"><div><div className="eyebrow">TEXT / 02</div><h2>變爻爻辭</h2></div><span>{changingCount ? `本卦第 ${changingPositions.map((position) => position + 1).join('、')} 爻` : '無變爻'}</span></div>
         {changingCount === 0 ? <div className="empty-result">本卦無變爻。經文內容會在完成人工校訂後，從本卦資料頁閱讀。</div> : <div className="changing-cards">{values.map((value, index) => { if (!isChangingLine(value)) return null; const line = HEXAGRAM_LINE_TEXTS[result.original.sequence]?.find((item) => item.position === index + 1); return <article className="changing-card" key={index}><div className="changing-card-top"><span>{lineName(value, index + 1)} · 第 {index + 1} 爻</span><StructureTag tone="moving">動爻</StructureTag></div><h3>本卦爻辭</h3><p>{line?.text || '此爻辭尚待人工校訂後匯入。'}</p><h3>小象</h3><p>{line?.xiaoxiang || '此小象尚待人工校訂後匯入。'}</p><h3>注</h3><p>{line?.commentary || '此注尚待人工校訂後匯入。'}</p><span className="review-status">內容狀態：{line?.reviewStatus ?? '待校訂'} · 來源第 {line?.sourceRef.sourceLine ?? '—'} 行</span></article>})}</div>}
@@ -371,6 +352,10 @@ function ContentReviewView() {
     return matchesStatus && searchTarget.includes(query)
   })
   const reviewedCount = HEXAGRAM_LINE_RECORDS.filter((record) => (draft.items[record.id]?.status ?? record.reviewStatus) === '已校訂').length
+  const visibleGroups = HEXAGRAMS.map((hexagram) => ({
+    hexagram,
+    records: visibleRecords.filter((record) => record.hexagramSequence === hexagram.sequence),
+  })).filter((group) => group.records.length > 0)
 
   const updateItem = (id: string, fallbackText: string, fallbackXiaoxiang: string, fallbackCommentary: string, fallbackStatus: ReviewStatus, fallbackNote: string, patch: Partial<{ text: string; xiaoxiang: string; commentary: string; status: ReviewStatus; note: string }>) => {
     const current = draft.items[id] ?? { text: fallbackText, xiaoxiang: fallbackXiaoxiang, commentary: fallbackCommentary, status: fallbackStatus, note: fallbackNote }
@@ -389,36 +374,42 @@ function ContentReviewView() {
 
   return (
     <main className="page review-page">
-      <div className="page-heading"><div className="eyebrow">CONTENT / REVIEW</div><h1>逐爻校訂，<em>保留來源。</em></h1><p>這裡可分別編輯爻辭與小象；修改會先保存為瀏覽器校訂草稿，不會直接改寫來源初稿。完成後請匯出 JSON，再由人工審核並合併回正式資料。</p></div>
+      <div className="page-heading"><div className="eyebrow">CONTENT / REVIEW</div><h1>逐爻校訂，<em>保留來源。</em></h1><p>每卦先呈現卦辭、彖、大象與注，再依初爻至上爻編輯爻辭、小象與注。修改會先保存為瀏覽器校訂草稿，不會直接改寫來源初稿；完成後請匯出 JSON，再由人工審核並合併回正式資料。</p></div>
       <section className="review-toolbar panel">
-        <label htmlFor="review-search">搜尋卦序、卦名、爻辭或小象</label>
+        <label htmlFor="review-search">搜尋卦序、卦名、上下卦、爻辭、小象或注</label>
         <input id="review-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="例如：乾、1-1、潛龍" />
         <label htmlFor="review-status">校訂狀態</label>
         <select id="review-status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as '全部' | ReviewStatus)}><option value="全部">全部</option><option value="待校訂">待校訂</option><option value="需複核">需複核</option><option value="已校訂">已校訂</option></select>
         <div className="review-summary"><strong>{reviewedCount}／384</strong><span>已校訂 · 顯示 {visibleRecords.length} 筆</span></div>
         <SecondaryButton onClick={exportDraft}>匯出校訂草稿</SecondaryButton>
       </section>
-      <section className="review-list" aria-label="384 爻校訂清單">
-        {visibleRecords.map((record) => {
-          const item = draft.items[record.id]
-          const text = item?.text ?? record.text
-          const xiaoxiang = item?.xiaoxiang ?? record.xiaoxiang
-          const commentary = item?.commentary ?? record.commentary
-          const status = item?.status ?? record.reviewStatus
-          const note = item?.note ?? ''
-          return <article className="review-record" key={record.id}>
-            <div className="review-record-header"><div><span className="card-label">{record.id} · {record.hexagramName}卦</span><h2>{record.name}</h2></div><span className="review-source">來源：{record.sourceRef.sourcePath} · 第 {record.sourceRef.sourceLine} 行</span></div>
-            <label htmlFor={`review-text-${record.id}`}>爻辭</label>
-            <div className="review-reference"><div className="review-reference-title">卦級參考 · {record.hexagramName}卦</div><HexagramTextBlock sequence={record.hexagramSequence} /></div>
-            <label htmlFor={`review-text-${record.id}`}>爻辭</label>
-            <textarea id={`review-text-${record.id}`} value={text} rows={2} onChange={(event) => updateItem(record.id, text, xiaoxiang, commentary, status, note, { text: event.target.value })} />
-            <label htmlFor={`review-xiaoxiang-${record.id}`}>小象</label>
-            <textarea id={`review-xiaoxiang-${record.id}`} value={xiaoxiang} rows={2} placeholder="輸入小象原文" onChange={(event) => updateItem(record.id, text, xiaoxiang, commentary, status, note, { xiaoxiang: event.target.value })} />
-            <label htmlFor={`review-commentary-${record.id}`}>注</label>
-            <textarea id={`review-commentary-${record.id}`} value={commentary} rows={3} placeholder="來源中的注內容" onChange={(event) => updateItem(record.id, text, xiaoxiang, commentary, status, note, { commentary: event.target.value })} />
-            <div className="review-fields"><label htmlFor={`review-status-${record.id}`}>狀態<select id={`review-status-${record.id}`} value={status} onChange={(event) => updateItem(record.id, text, xiaoxiang, commentary, status, note, { status: event.target.value as ReviewStatus })}><option value="待校訂">待校訂</option><option value="需複核">需複核</option><option value="已校訂">已校訂</option></select></label><label htmlFor={`review-note-${record.id}`}>備註<textarea id={`review-note-${record.id}`} value={note} rows={2} placeholder="記錄新見解、異體字、斷句或來源差異" onChange={(event) => updateItem(record.id, text, xiaoxiang, commentary, status, note, { note: event.target.value })} /></label></div>
-          </article>
-        })}
+      <section className="review-list" aria-label="64 卦、384 爻校訂清單">
+        {visibleGroups.map(({ hexagram, records }) => (
+          <section className="review-hexagram" key={hexagram.sequence}>
+            <div className="review-hexagram-header"><div><span className="card-label">第 {hexagram.sequence} 卦</span><h2>{hexagram.name}卦</h2></div><span>{trigramLabel(hexagram.upper)}上{trigramLabel(hexagram.lower)}下 · {records.length}／6 爻</span></div>
+            <HexagramTextBlock sequence={hexagram.sequence} />
+            <div className="review-lines">
+              {records.map((record) => {
+                const item = draft.items[record.id]
+                const text = item?.text ?? record.text
+                const xiaoxiang = item?.xiaoxiang ?? record.xiaoxiang
+                const commentary = item?.commentary ?? record.commentary
+                const status = item?.status ?? record.reviewStatus
+                const note = item?.note ?? record.reviewNote ?? ''
+                return <article className="review-record" key={record.id}>
+                  <div className="review-record-header"><div><span className="card-label">第 {record.position} 爻 · {record.id}</span><h3>{record.name}</h3></div><span className="review-source">來源：{record.sourceRef.sourcePath} · 第 {record.sourceRef.sourceLine} 行</span></div>
+                  <label htmlFor={`review-text-${record.id}`}>爻辭</label>
+                  <textarea id={`review-text-${record.id}`} value={text} rows={2} onChange={(event) => updateItem(record.id, text, xiaoxiang, commentary, status, note, { text: event.target.value })} />
+                  <label htmlFor={`review-xiaoxiang-${record.id}`}>小象</label>
+                  <textarea id={`review-xiaoxiang-${record.id}`} value={xiaoxiang} rows={2} placeholder="輸入小象原文" onChange={(event) => updateItem(record.id, text, xiaoxiang, commentary, status, note, { xiaoxiang: event.target.value })} />
+                  <label htmlFor={`review-commentary-${record.id}`}>注</label>
+                  <textarea id={`review-commentary-${record.id}`} value={commentary} rows={3} placeholder="來源中的注內容" onChange={(event) => updateItem(record.id, text, xiaoxiang, commentary, status, note, { commentary: event.target.value })} />
+                  <div className="review-fields"><label htmlFor={`review-status-${record.id}`}>狀態<select id={`review-status-${record.id}`} value={status} onChange={(event) => updateItem(record.id, text, xiaoxiang, commentary, status, note, { status: event.target.value as ReviewStatus })}><option value="待校訂">待校訂</option><option value="需複核">需複核</option><option value="已校訂">已校訂</option></select></label><label htmlFor={`review-note-${record.id}`}>備註<textarea id={`review-note-${record.id}`} value={note} rows={2} placeholder="記錄新見解、異體字、斷句或來源差異" onChange={(event) => updateItem(record.id, text, xiaoxiang, commentary, status, note, { note: event.target.value })} /></label></div>
+                </article>
+              })}
+            </div>
+          </section>
+        ))}
       </section>
     </main>
   )
@@ -440,7 +431,7 @@ function HexagramDetailView({ sequence, onBack, onNavigate }: { sequence: number
       <div className="detail-back"><button className="text-button" type="button" onClick={onBack}>← 返回六十四卦</button></div>
       <div className="page-heading"><div className="eyebrow">HEXAGRAM {String(hexagram.sequence).padStart(2, '0')}</div><h1>{hexagram.name}卦，<em>由象入門。</em></h1><p>{trigramLabel(hexagram.upper)}上{trigramLabel(hexagram.lower)}下 · 上卦 {hexagram.upper}／下卦 {hexagram.lower}</p></div>
       <section className="detail-overview panel"><HexagramFigure values={hexagramValues(hexagram)} label={`${hexagram.name}卦象`} /><HexagramTextBlock sequence={sequence} /></section>
-      <section className="result-section detail-lines-section"><div className="section-heading"><div><div className="eyebrow">TEXT / LINES</div><h2>六爻爻辭</h2></div><span>初爻至上爻</span></div><p className="section-intro">由下往上保存，畫面由上爻排列至初爻；內容狀態與來源定位均保留。</p><div className="detail-line-list">{[...lines].reverse().map((line) => <article className="detail-line-card" key={line.position}><div><span className="card-label">第 {line.position} 爻</span><h3>{line.name}</h3></div><div className="detail-line-copy"><p>{line.text}</p><p><strong>小象</strong>{line.xiaoxiang || '尚待人工校訂。'}</p><p><strong>注</strong>{line.commentary || '尚待人工校訂。'}</p></div><small>內容狀態：{line.reviewStatus} · 來源第 {line.sourceRef.sourceLine} 行</small></article>)}</div></section>
+      <section className="result-section detail-lines-section"><div className="section-heading"><div><div className="eyebrow">TEXT / LINES</div><h2>六爻爻辭</h2></div><span>初爻至上爻</span></div><p className="section-intro">依初爻至上爻排列，方便按閱讀順序逐爻查看；內容狀態與來源定位均保留。</p><div className="detail-line-list">{lines.map((line) => <article className="detail-line-card" key={line.position}><div><span className="card-label">第 {line.position} 爻</span><h3>{line.name}</h3></div><div className="detail-line-copy"><p>{line.text}</p><p><strong>小象</strong>{line.xiaoxiang || '尚待人工校訂。'}</p><p><strong>注</strong>{line.commentary || '尚待人工校訂。'}</p></div><small>內容狀態：{line.reviewStatus} · 來源第 {line.sourceRef.sourceLine} 行</small></article>)}</div></section>
       <nav className="detail-pagination" aria-label="六十四卦前後導覽"><button className="button button-secondary" type="button" disabled={!previous} onClick={() => previous && onNavigate(previous.sequence)}>← {previous ? `${previous.sequence}. ${previous.name}卦` : '已是第一卦'}</button><span>第 {sequence}／64 卦</span><button className="button button-secondary" type="button" disabled={!next} onClick={() => next && onNavigate(next.sequence)}>{next ? `${next.sequence}. ${next.name}卦` : '已是最後一卦'} →</button></nav>
     </main>
   )
@@ -564,10 +555,6 @@ function App() {
     setCast((previous) => previous ? autoCompleteCast(previous) : previous)
   }
 
-  const complete = () => {
-    setCast((previous) => previous ? completeCast(previous) : previous)
-  }
-
   const goBack = () => {
     setCast((previous) => previous ? undoCast(previous) : previous)
   }
@@ -589,7 +576,7 @@ function App() {
       <Header view={view} onNavigate={navigate} />
       {view === 'home' && <HomeView onStart={() => navigate('setup')} onBrowse={() => navigate('hexagrams')} />}
       {view === 'setup' && <SetupView onStart={startCast} onComplete={completeFromSetup} />}
-      {view === 'cast' && cast && <CastView state={cast} onNext={advance} onAuto={autoComplete} onComplete={complete} onBack={goBack} onRestart={restart} onResult={() => navigate('result')} />}
+      {view === 'cast' && cast && <CastView state={cast} onNext={advance} onAuto={autoComplete} onBack={goBack} onRestart={restart} onResult={() => navigate('result')} />}
       {view === 'result' && cast?.completed && <ResultView state={cast} question={question} onRestart={restart} onBrowse={() => navigate('hexagrams')} onOpenDetail={openHexagram} />}
       {view === 'hexagrams' && <HexagramsView onOpenDetail={openHexagram} />}
       {view === 'hexagram-detail' && selectedSequence !== undefined && <HexagramDetailView sequence={selectedSequence} onBack={() => navigate('hexagrams')} onNavigate={openHexagram} />}

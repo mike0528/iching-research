@@ -852,13 +852,6 @@ input:focus {
   line-height: 1.8;
 }
 
-.result-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 30px;
-  align-items: start;
-}
-
 .result-section {
   margin-top: 62px;
 }
@@ -955,49 +948,6 @@ input:focus {
   border-color: rgba(184, 95, 69, 0.3);
   color: var(--cinnabar);
   background: rgba(184, 95, 69, 0.08);
-}
-
-.line-text-list {
-  border: 1px solid var(--line);
-  background: var(--paper);
-}
-
-.line-text-row {
-  padding: 15px 16px;
-  border-bottom: 1px solid rgba(217, 214, 203, 0.7);
-}
-
-.line-text-row:last-child {
-  border-bottom: 0;
-}
-
-.line-text-meta {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  color: var(--muted);
-  font-family: sans-serif;
-  font-size: 11px;
-}
-
-.line-text-meta strong {
-  color: var(--moss-dark);
-  font-size: 14px;
-}
-
-.line-text-row p {
-  margin: 8px 0 0;
-  color: var(--ink);
-  font-size: 14px;
-  line-height: 1.8;
-}
-
-.line-text-row small {
-  display: block;
-  margin-top: 8px;
-  color: var(--cinnabar);
-  font-family: sans-serif;
-  font-size: 9px;
 }
 
 .rule-details {
@@ -1155,6 +1105,41 @@ input:focus {
 .review-list {
   display: flex;
   flex-direction: column;
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.review-hexagram {
+  padding: 24px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.review-hexagram-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+  color: var(--muted);
+  font-family: sans-serif;
+  font-size: 11px;
+}
+
+.review-hexagram-header h2 {
+  margin: 7px 0 0;
+  color: var(--ink);
+  font-family: Georgia, serif;
+  font-size: 27px;
+  font-weight: 500;
+}
+
+.review-hexagram > .hexagram-text {
+  margin-top: 20px;
+}
+
+.review-lines {
+  display: flex;
+  flex-direction: column;
   gap: 14px;
   margin-top: 20px;
 }
@@ -1175,26 +1160,6 @@ input:focus {
 
 .review-record-header h2 {
   margin: 7px 0 0;
-}
-
-.review-reference {
-  margin: 22px 0;
-  padding: 16px 18px;
-  border: 1px solid var(--line);
-  background: #f8f6ef;
-}
-
-.review-reference-title {
-  color: var(--muted);
-  font-family: sans-serif;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.review-reference .hexagram-text {
-  margin-top: 12px;
-  padding-top: 12px;
 }
 
 .review-source {
@@ -1479,7 +1444,6 @@ input:focus {
   .feature-grid,
   .cast-layout,
   .overview-grid,
-  .result-detail-grid,
   .detail-overview,
   .detail-line-list,
   .changed-judgment {
@@ -1523,8 +1487,22 @@ input:focus {
 
   .result-topline,
   .selected-hexagram,
-  .review-record-header {
+  .review-record-header,
+  .review-hexagram-header {
     display: block;
+  }
+
+  .review-hexagram {
+    padding: 18px;
+  }
+
+  .setup-panel {
+    padding: 24px 18px;
+  }
+
+  .setup-actions .button {
+    min-height: 52px;
+    font-size: 14px;
   }
 
   .review-toolbar,

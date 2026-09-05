@@ -26,7 +26,7 @@ npm run content:compare -- --docx /path/to/hexagrams-docx.txt --pdf /path/to/hex
 
 E2E 預設使用 macOS 的系統 Chrome；其他環境請設定 `E2E_CHROME_PATH`。
 
-網站中的「資料校訂」頁可分別編輯逐爻的爻辭與小象，並設定校訂狀態與備註。草稿保存在瀏覽器 `localStorage`，可匯出 `iching-line-review-draft.json`，不會直接改寫來源資料。
+網站中的「資料校訂」頁會依每卦呈現卦辭、彖、大象、注，再按初爻至上爻編輯逐爻的爻辭、小象與注，並設定校訂狀態與備註。草稿保存在瀏覽器 `localStorage`，可匯出 `iching-line-review-draft.json`，不會直接改寫來源資料。
 
 完成人工確認後，將匯出的草稿合併成新的資料檔（預設不覆蓋來源檔）：
 

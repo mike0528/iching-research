@@ -1,14 +1,16 @@
 import { isYangLine, transformedLineValue } from './lines'
 import type { HexagramDefinition, LineValue, TrigramName } from './types'
 
+// 位元由下往上排列：1 為陽爻，0 為陰爻。
+// 因此兌為「上缺」110，巽為「下斷」011。
 export const TRIGRAM_BITS: Record<TrigramName, string> = {
   乾: '111',
   坤: '000',
   震: '100',
-  巽: '110',
+  巽: '011',
   坎: '010',
   離: '101',
-  兌: '011',
+  兌: '110',
   艮: '001',
 }
 
