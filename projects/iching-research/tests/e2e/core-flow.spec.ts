@@ -83,6 +83,37 @@ test.describe('觀象核心使用流程', () => {
     await expect(page.getByRole('button', { name: /已是最後一卦/ })).toBeDisabled()
   })
 
+  test('易理研究室選卦、結構篩選與結果跳轉', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await goTo(page, '#/research')
+    await expect(page.getByRole('heading', { name: /易理研究室/ })).toBeVisible()
+    await expect(page.locator('.research-match-card')).toHaveCount(64)
+
+    await page.locator('#research-hexagram').selectOption('63')
+    await page.locator('#research-line').selectOption('2')
+    await expect(page.locator('.research-selector-summary')).toContainText('既濟卦')
+    await page.locator('select[aria-label="下卦條件"]').selectOption('坎')
+    await expect(page.locator('.research-match-card')).toHaveCount(8)
+    await page.locator('select[aria-label="下卦條件"]').selectOption('')
+    await page.locator('select[aria-label="上卦條件"]').selectOption('坎')
+    await expect(page.locator('.research-match-card')).toHaveCount(8)
+    await page.locator('input[type="checkbox"]').first().uncheck()
+    await expect(page.locator('.research-match-card')).toHaveCount(48)
+
+    await page.evaluate(() => {
+      const change = { initialStalks: 49, leftStalks: 24, rightStalks: 25, rightAfterHangingOne: 24, leftRemainder: 3, rightRemainder: 4, overCount: 8, remainingStalks: 41 }
+      const line = { value: 9, polarity: 'yang', isChanging: true, changes: [change, change, change] }
+      sessionStorage.setItem('iching-research:cast-state', JSON.stringify({ stalks: 0, lineIndex: 6, changeIndex: 3, stage: -1, activeChange: null, lineChanges: [], completedLines: [line, line, line, line, line, line], lastCompletedLine: line, completed: true, history: [] }))
+    })
+    await page.reload()
+    await goTo(page, '#/result')
+    await expect(page.locator('.changing-card')).toHaveCount(6)
+    await page.getByRole('button', { name: '研究此爻 ↗' }).first().click()
+    await expect(page).toHaveURL(/#\/research\?hexagram=1&line=1&changed=2&value=9$/)
+    await expect(page.locator('.research-selected').getByRole('heading', { name: '乾卦 · 初九' })).toBeVisible()
+    await expect(page.locator('.research-context')).toContainText('之卦：第 2 卦 坤卦')
+  })
+
   test('資料校訂頁搜尋小象與手機寬度', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 })
     await goTo(page, '#/review')

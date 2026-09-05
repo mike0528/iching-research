@@ -5,13 +5,15 @@ import { HEXAGRAM_LINE_RECORDS, HEXAGRAM_LINE_TEXTS } from './domain/iching/hexa
 import { HEXAGRAM_TEXTS } from './domain/iching/hexagramTexts'
 import { isChangingLine, isYangLine, lineLabel, lineName } from './domain/iching/lines'
 import { analyzeLines, POSITION_LABELS } from './domain/iching/relationships'
-import type { HexagramDefinition, LineValue, ReviewStatus, YarrowChange } from './domain/iching/types'
+import { buildResearchProfile, findResearchMatches, valuesForHexagram } from './domain/iching/research'
+import type { HexagramResearchProfile, ResearchFilter, ResearchRelationFilter } from './domain/iching/research'
+import type { LineValue, Polarity, ReviewStatus, TrigramName, YarrowChange } from './domain/iching/types'
 import { CAST_STORAGE_KEY, YARROW_CHANGE_COUNT, YARROW_OPERATION_COUNT, advanceCast, autoCompleteCast, clearCastState, completeCast, createCastState, loadCastState, saveCastState, undoCast } from './features/divination/castState'
 import type { CastState } from './features/divination/castState'
 import { loadReviewDraft, saveReviewDraft, updateReviewItem } from './features/contentReview/reviewState'
 import type { ReviewDraft } from './features/contentReview/reviewState'
 
-type View = 'home' | 'setup' | 'cast' | 'result' | 'hexagrams' | 'hexagram-detail' | 'review'
+type View = 'home' | 'setup' | 'cast' | 'result' | 'hexagrams' | 'hexagram-detail' | 'review' | 'research'
 
 const OPERATION_LABELS = ['分二', '掛一', '揲四', '歸奇']
 function currentOperationText(change: YarrowChange, stage: number): string {
@@ -50,6 +52,7 @@ function Header({ view, onNavigate }: { view: View; onNavigate: (nextView: View)
       <nav className="main-nav" aria-label="主要導覽">
         <button className={view === 'setup' || view === 'cast' || view === 'result' ? 'active' : ''} type="button" onClick={() => onNavigate('setup')}>開始卜卦</button>
         <button className={view === 'hexagrams' || view === 'hexagram-detail' ? 'active' : ''} type="button" onClick={() => onNavigate('hexagrams')}>六十四卦</button>
+        <button className={view === 'research' ? 'active' : ''} type="button" onClick={() => onNavigate('research')}>易理研究室</button>
         <button className={view === 'review' ? 'active' : ''} type="button" onClick={() => onNavigate('review')}>資料校訂</button>
         <button type="button" onClick={() => onNavigate('home')}>使用說明</button>
       </nav>
@@ -259,7 +262,7 @@ function HexagramTextBlock({ sequence }: { sequence: number }) {
   )
 }
 
-function ResultView({ state, question, onRestart, onBrowse, onOpenDetail }: { state: CastState; question: string; onRestart: () => void; onBrowse: () => void; onOpenDetail: (sequence: number) => void }) {
+function ResultView({ state, question, onRestart, onBrowse, onOpenDetail, onResearch }: { state: CastState; question: string; onRestart: () => void; onBrowse: () => void; onOpenDetail: (sequence: number) => void; onResearch: (hexagramSequence: number, linePosition: number, changedSequence: number, lineValue: 6 | 9) => void }) {
   const values = state.completedLines.map((line) => line.value) as LineValue[]
   const result = useMemo(() => {
     const original = getHexagram(values)
@@ -324,10 +327,91 @@ function ResultView({ state, question, onRestart, onBrowse, onOpenDetail }: { st
       </section>
       <section className="result-section changing-section">
         <div className="section-heading"><div><div className="eyebrow">TEXT / 02</div><h2>變爻爻辭</h2></div><span>{changingCount ? `本卦第 ${changingPositions.map((position) => position + 1).join('、')} 爻` : '無變爻'}</span></div>
-        {changingCount === 0 ? <div className="empty-result">本卦無變爻。經文內容會在完成人工校訂後，從本卦資料頁閱讀。</div> : <div className="changing-cards">{values.map((value, index) => { if (!isChangingLine(value)) return null; const line = HEXAGRAM_LINE_TEXTS[result.original.sequence]?.find((item) => item.position === index + 1); return <article className="changing-card" key={index}><div className="changing-card-top"><span>{lineName(value, index + 1)} · 第 {index + 1} 爻</span><StructureTag tone="moving">動爻</StructureTag></div><h3>本卦爻辭</h3><p>{line?.text || '此爻辭尚待人工校訂後匯入。'}</p><h3>小象</h3><p>{line?.xiaoxiang || '此小象尚待人工校訂後匯入。'}</p><h3>注</h3><p>{line?.commentary || '此注尚待人工校訂後匯入。'}</p><span className="review-status">內容狀態：{line?.reviewStatus ?? '待校訂'} · 來源第 {line?.sourceRef.sourceLine ?? '—'} 行</span></article>})}</div>}
+        {changingCount === 0 ? <div className="empty-result">本卦無變爻。經文內容會在完成人工校訂後，從本卦資料頁閱讀。</div> : <div className="changing-cards">{values.map((value, index) => { if (!isChangingLine(value)) return null; const line = HEXAGRAM_LINE_TEXTS[result.original.sequence]?.find((item) => item.position === index + 1); return <article className="changing-card" key={index}><div className="changing-card-top"><span>{lineName(value, index + 1)} · 第 {index + 1} 爻</span><StructureTag tone="moving">動爻</StructureTag></div><h3>本卦爻辭</h3><p>{line?.text || '此爻辭尚待人工校訂後匯入。'}</p><h3>小象</h3><p>{line?.xiaoxiang || '此小象尚待人工校訂後匯入。'}</p><h3>注</h3><p>{line?.commentary || '此注尚待人工校訂後匯入。'}</p><span className="review-status">內容狀態：{line?.reviewStatus ?? '待校訂'} · 來源第 {line?.sourceRef.sourceLine ?? '—'} 行</span><button className="text-button research-link" type="button" onClick={() => onResearch(result.original.sequence, index + 1, result.transformed.sequence, value as 6 | 9)}>研究此爻 ↗</button></article>})}</div>}
       </section>
       {changingCount >= 3 && <section className="changed-judgment"><div><div className="eyebrow">TEXT / 03</div><h2>之卦卦辭</h2><p>{result.transformed.name}卦 · 第 {result.transformed.sequence} 卦</p></div><div className="pending-copy changed-judgment-copy"><strong>卦辭</strong><p className="changed-judgment-quote">{HEXAGRAM_TEXTS[result.transformed.sequence]?.judgment || '之卦卦辭尚待人工校訂後匯入。'}</p><small>內容狀態：{HEXAGRAM_TEXTS[result.transformed.sequence]?.reviewStatus ?? '待校訂'}</small></div></section>}
       <div className="result-disclaimer">目前結果只提供可追溯的卦象結構與經文閱讀入口，不產生針對個人問題的吉凶或行動建議。</div>
+    </main>
+  )
+}
+
+type ResearchSeed = {
+  hexagramSequence?: number
+  linePosition?: number
+  changedSequence?: number
+  lineValue?: 6 | 9
+}
+
+const TRIGRAM_NAMES = Object.keys(TRIGRAM_BITS) as TrigramName[]
+
+function researchRunLabel(run: HexagramResearchProfile['runs'][number]): string {
+  const start = POSITION_LABELS[run.startPosition - 1]
+  const end = POSITION_LABELS[run.endPosition - 1]
+  return `${start}${start === end ? '' : `至${end}`}${run.polarity === 'yang' ? '陽' : '陰'}（${run.length}）`
+}
+
+function replaceResearchSelection(sequence: number, linePosition: number, seed?: ResearchSeed) {
+  if (typeof window === 'undefined') return
+  const params = new URLSearchParams({ hexagram: String(sequence), line: String(linePosition) })
+  if (seed?.changedSequence) params.set('changed', String(seed.changedSequence))
+  if (seed?.lineValue) params.set('value', String(seed.lineValue))
+  window.history.replaceState(null, '', `#/research?${params.toString()}`)
+}
+
+function ResearchView({ seed, onOpenDetail }: { seed?: ResearchSeed; onOpenDetail: (sequence: number) => void }) {
+  const [selectedSequence, setSelectedSequence] = useState(seed?.hexagramSequence ?? 1)
+  const [selectedLinePosition, setSelectedLinePosition] = useState(seed?.linePosition ?? 1)
+  const [filter, setFilter] = useState<ResearchFilter>({ selectedLinePosition: seed?.linePosition ?? 1, samePosition: true })
+  const profiles = useMemo(() => HEXAGRAMS.map(buildResearchProfile), [])
+  const hexagram = HEXAGRAMS.find((item) => item.sequence === selectedSequence) ?? HEXAGRAMS[0]
+  const profile = profiles[selectedSequence - 1]
+  const lines = HEXAGRAM_LINE_TEXTS[selectedSequence] ?? []
+  const selectedLine = lines.find((line) => line.position === selectedLinePosition) ?? lines[0]
+  const selectedStructure = profile.structures[selectedLinePosition - 1]
+  const changedHexagram = seed?.changedSequence ? HEXAGRAMS.find((item) => item.sequence === seed.changedSequence) : undefined
+  const matches = useMemo(() => findResearchMatches(profiles, HEXAGRAM_LINE_RECORDS, filter), [filter, profiles])
+
+  const updateFilter = (patch: Partial<ResearchFilter>) => setFilter((previous) => ({ ...previous, ...patch }))
+  const selectedValue = profile.values[selectedLinePosition - 1]
+  const immediateNeighbours = [selectedStructure ? profile.values[selectedLinePosition - 2] : undefined, selectedStructure ? profile.values[selectedLinePosition] : undefined]
+  const contextLine = seed?.lineValue ? `${lineName(seed.lineValue, selectedLinePosition)} · 動爻` : '直接選取的靜態爻結構'
+
+  return (
+    <main className="page research-page">
+      <div className="page-heading">
+        <div className="eyebrow">RESEARCH / LINE STUDY</div>
+        <h1>易理研究室，<em>從一爻看環境。</em></h1>
+        <p>選擇一卦一爻，觀察它在六爻結構中的陰陽、位置與鄰接關係，再用明確條件找出其他卦中的比較對象。這裡提供結構與經文資料，不自動下斷語。</p>
+      </div>
+
+      {changedHexagram && <section className="research-context panel"><div><span className="card-label">本次卜卦上下文</span><strong>本卦：第 {selectedSequence} 卦 {hexagram.name}卦</strong><span>{trigramLabel(hexagram.upper)}上{trigramLabel(hexagram.lower)}下 · 研究第 {selectedLinePosition} 爻</span><p>{HEXAGRAM_TEXTS[hexagram.sequence]?.judgment}</p></div><div><strong>之卦：第 {changedHexagram.sequence} 卦 {changedHexagram.name}卦</strong><span>{trigramLabel(changedHexagram.upper)}上{trigramLabel(changedHexagram.lower)}下 · {contextLine}</span><p>{HEXAGRAM_TEXTS[changedHexagram.sequence]?.judgment}</p></div></section>}
+
+      <section className="research-selector panel">
+        <div className="research-selector-field"><label htmlFor="research-hexagram">研究卦</label><select id="research-hexagram" value={selectedSequence} onChange={(event) => { const sequence = Number(event.target.value); setSelectedSequence(sequence); replaceResearchSelection(sequence, selectedLinePosition, seed) }}>{HEXAGRAMS.map((item) => <option value={item.sequence} key={item.sequence}>{String(item.sequence).padStart(2, '0')} · {item.name}卦 · {item.upper}上{item.lower}下</option>)}</select></div>
+        <div className="research-selector-field"><label htmlFor="research-line">研究爻</label><select id="research-line" value={selectedLinePosition} onChange={(event) => { const position = Number(event.target.value); setSelectedLinePosition(position); updateFilter({ selectedLinePosition: position }); replaceResearchSelection(selectedSequence, position, seed) }}>{POSITION_LABELS.map((label, index) => <option value={index + 1} key={label}>第 {label}爻 · {lines[index]?.name ?? ''}</option>)}</select></div>
+        <div className="research-selector-summary"><span>目前研究</span><strong>{hexagram.name}卦 · 第 {POSITION_LABELS[selectedLinePosition - 1]}爻</strong><small>一般六爻資料 · {profile.pattern}</small></div>
+      </section>
+
+      <section className="research-hexagram panel">
+        <div className="section-heading"><div><div className="eyebrow">HEXAGRAM / SELECTED</div><h2>完整卦資料</h2></div><button className="text-button" type="button" onClick={() => onOpenDetail(hexagram.sequence)}>開啟卦詳細頁 ↗</button></div>
+        <div className="research-hexagram-overview"><HexagramFigure values={profile.values} label={`${hexagram.name}卦象`} /><HexagramTextBlock sequence={hexagram.sequence} /></div>
+        <div className="research-line-picker" aria-label="選擇研究爻">{lines.map((line) => <button className={line.position === selectedLinePosition ? 'selected' : ''} type="button" aria-pressed={line.position === selectedLinePosition} onClick={() => { setSelectedLinePosition(line.position); updateFilter({ selectedLinePosition: line.position }); replaceResearchSelection(selectedSequence, line.position, seed) }} key={line.position}><span>第 {POSITION_LABELS[line.position - 1]}爻</span><strong>{line.name}</strong><small>{profile.values[line.position - 1] === 7 ? '陽' : '陰'}</small></button>)}</div>
+      </section>
+
+      {selectedLine && selectedStructure && <section className="research-selected panel">
+        <div className="section-heading"><div><div className="eyebrow">LINE / SELECTED</div><h2>{hexagram.name}卦 · {selectedLine.name}</h2></div><span className="change-badge">第 {selectedLinePosition} 爻</span></div>
+        <div className="research-selected-grid"><div className="research-structure-summary"><div className="research-line-state"><strong>{selectedValue === 7 ? '陽爻' : '陰爻'}</strong><span>{contextLine}</span></div><div className="structure-tags"><StructureTag tone={selectedStructure.isCorrectPosition ? 'positive' : 'muted'}>{selectedStructure.isCorrectPosition ? '得位' : '失位'}</StructureTag><StructureTag tone={selectedStructure.isCentral ? 'positive' : 'muted'}>{selectedStructure.isCentral ? '得中' : '非中位'}</StructureTag><StructureTag>{selectedStructure.correspondenceStatus}（{POSITION_LABELS[selectedStructure.correspondingPosition - 1]}爻）</StructureTag>{selectedStructure.adjacentRelations.map((relation) => <StructureTag key={`${relation.kind}-${relation.adjacentPosition}`}>{relation.kind}（{POSITION_LABELS[relation.adjacentPosition - 1]}爻）</StructureTag>)}</div><div className="research-neighbours"><strong>立即鄰爻</strong><span>下方：{immediateNeighbours[0] === undefined ? '無' : `${POSITION_LABELS[selectedLinePosition - 2]}爻 · ${immediateNeighbours[0] === 7 ? '陽' : '陰'}`}</span><span>上方：{immediateNeighbours[1] === undefined ? '無' : `${POSITION_LABELS[selectedLinePosition]}爻 · ${immediateNeighbours[1] === 7 ? '陽' : '陰'}`}</span></div><div className="research-counts"><span>整卦：陽 {profile.totalCounts.yang} · 陰 {profile.totalCounts.yin}</span><span>下卦：陽 {profile.lowerCounts.yang} · 陰 {profile.lowerCounts.yin}</span><span>上卦：陽 {profile.upperCounts.yang} · 陰 {profile.upperCounts.yin}</span></div><div className="research-runs"><strong>連續區段</strong>{profile.runs.map((run) => <span key={`${run.startPosition}-${run.endPosition}`}>{researchRunLabel(run)}</span>)}</div></div><div className="research-line-text"><span className="card-label">本爻經文</span><p><strong>爻辭</strong>{selectedLine.text}</p><p><strong>小象</strong>{selectedLine.xiaoxiang || '尚待人工校訂。'}</p><p><strong>注</strong>{selectedLine.commentary || '尚待人工校訂。'}</p><small>內容狀態：{selectedLine.reviewStatus} · 來源第 {selectedLine.sourceRef.sourceLine} 行</small></div></div>
+      </section>}
+
+      <section className="research-filters panel">
+        <div className="section-heading"><div><div className="eyebrow">FILTER / STRUCTURE</div><h2>找相似結構</h2></div><span>{matches.length} 筆比較資料</span></div>
+        <div className="research-filter-grid"><label>上卦<select aria-label="上卦條件" value={filter.upperTrigram ?? ''} onChange={(event) => updateFilter({ upperTrigram: (event.target.value || undefined) as TrigramName | undefined })}><option value="">不限</option>{TRIGRAM_NAMES.map((name) => <option value={name} key={name}>{name}（{trigramLabel(name)}）</option>)}</select></label><label>下卦<select aria-label="下卦條件" value={filter.lowerTrigram ?? ''} onChange={(event) => updateFilter({ lowerTrigram: (event.target.value || undefined) as TrigramName | undefined })}><option value="">不限</option>{TRIGRAM_NAMES.map((name) => <option value={name} key={name}>{name}（{trigramLabel(name)}）</option>)}</select></label><label>陰陽<select aria-label="陰陽條件" value={filter.polarity ?? ''} onChange={(event) => updateFilter({ polarity: (event.target.value || undefined) as Polarity | undefined })}><option value="">不限</option><option value="yang">陽爻</option><option value="yin">陰爻</option></select></label><label>位<select aria-label="得位條件" value={filter.positionStatus ?? ''} onChange={(event) => updateFilter({ positionStatus: (event.target.value || undefined) as ResearchFilter['positionStatus'] })}><option value="">不限</option><option value="得位">得位</option><option value="失位">失位</option></select></label><label>中位<select aria-label="得中條件" value={filter.centralStatus ?? ''} onChange={(event) => updateFilter({ centralStatus: (event.target.value || undefined) as ResearchFilter['centralStatus'] })}><option value="">不限</option><option value="得中">得中</option><option value="不中">不中</option></select></label><label>應<select aria-label="應位條件" value={filter.correspondenceStatus ?? ''} onChange={(event) => updateFilter({ correspondenceStatus: (event.target.value || undefined) as ResearchFilter['correspondenceStatus'] })}><option value="">不限</option><option value="正應">正應</option><option value="無正應">無正應</option></select></label><label>承／乘<select aria-label="承乘條件" value={filter.adjacentRelation ?? ''} onChange={(event) => updateFilter({ adjacentRelation: (event.target.value || undefined) as ResearchRelationFilter | undefined })}><option value="">不限</option><option value="承陽">承陽</option><option value="乘剛">乘剛</option><option value="無承乘">無承乘</option></select></label><label>連續陰陽<select aria-label="連續陰陽長度" value={filter.minimumRunLength ?? ''} onChange={(event) => updateFilter({ minimumRunLength: (event.target.value || undefined) as ResearchFilter['minimumRunLength'] })}><option value="">不限</option><option value="2">至少 2 個</option><option value="3">至少 3 個</option><option value="4">至少 4 個</option></select></label></div>
+        <div className="research-filter-options"><label><input type="checkbox" checked={filter.samePosition} onChange={(event) => updateFilter({ samePosition: event.target.checked })} /> 預設相同爻位</label><label><input type="checkbox" checked={filter.runIncludesSelectedLine ?? false} disabled={!filter.minimumRunLength} onChange={(event) => updateFilter({ runIncludesSelectedLine: event.target.checked })} /> 連續區段必須包含研究爻</label></div>
+        <div className="research-filter-note">目前比較以明確條件篩選，結果依卦序、爻位排列；筆數多不代表意義較相近。</div>
+      </section>
+
+      <section className="research-results"><div className="section-heading"><div><div className="eyebrow">RESULTS / COMPARISON</div><h2>爻辭比較</h2></div><span>{matches.length} 筆</span></div><div className="research-match-list">{matches.map((match) => <article className="research-match-card" key={match.line.id}><div className="research-match-header"><div><span className="card-label">第 {match.profile.hexagram.sequence} 卦 · 第 {match.line.position} 爻</span><h3>{match.profile.hexagram.name}卦 · {match.line.name}</h3></div><span>{match.profile.hexagram.upper}上{match.profile.hexagram.lower}下</span></div><div className="research-match-meta"><span>{match.structure.polarity === 'yang' ? '陽爻' : '陰爻'}</span><span>{match.structure.isCorrectPosition ? '得位' : '失位'}</span><span>{match.structure.isCentral ? '得中' : '非中位'}</span><span>{match.structure.correspondenceStatus}</span>{match.structure.adjacentRelations.map((relation) => <span key={`${relation.kind}-${relation.adjacentPosition}`}>{relation.kind}</span>)}</div><p className="research-match-text">{match.line.text}</p><p><strong>小象</strong>{match.line.xiaoxiang || '尚待人工校訂。'}</p><p><strong>注</strong>{match.line.commentary || '尚待人工校訂。'}</p><div className="research-match-footer"><span>連續：{match.profile.runs.map(researchRunLabel).join('、')}</span><button className="text-button" type="button" onClick={() => onOpenDetail(match.profile.hexagram.sequence)}>開啟卦頁 ↗</button></div></article>)}</div></section>
+      <div className="result-disclaimer">研究室只提供可追溯的結構條件與經文比較，不表示不同爻辭具有相同義理，也不產生個人化吉凶或行動建議。</div>
     </main>
   )
 }
@@ -415,10 +499,6 @@ function ContentReviewView() {
   )
 }
 
-function hexagramValues(hexagram: HexagramDefinition): LineValue[] {
-  return `${TRIGRAM_BITS[hexagram.lower]}${TRIGRAM_BITS[hexagram.upper]}`.split('').map((bit) => bit === '1' ? 7 : 8) as LineValue[]
-}
-
 function HexagramDetailView({ sequence, onBack, onNavigate }: { sequence: number; onBack: () => void; onNavigate: (sequence: number) => void }) {
   const hexagram = HEXAGRAMS.find((item) => item.sequence === sequence)
   if (!hexagram) return <main className="page"><h1>找不到這一卦</h1><SecondaryButton onClick={onBack}>返回六十四卦</SecondaryButton></main>
@@ -430,7 +510,7 @@ function HexagramDetailView({ sequence, onBack, onNavigate }: { sequence: number
     <main className="page hexagram-detail-page">
       <div className="detail-back"><button className="text-button" type="button" onClick={onBack}>← 返回六十四卦</button></div>
       <div className="page-heading"><div className="eyebrow">HEXAGRAM {String(hexagram.sequence).padStart(2, '0')}</div><h1>{hexagram.name}卦，<em>由象入門。</em></h1><p>{trigramLabel(hexagram.upper)}上{trigramLabel(hexagram.lower)}下 · 上卦 {hexagram.upper}／下卦 {hexagram.lower}</p></div>
-      <section className="detail-overview panel"><HexagramFigure values={hexagramValues(hexagram)} label={`${hexagram.name}卦象`} /><HexagramTextBlock sequence={sequence} /></section>
+      <section className="detail-overview panel"><HexagramFigure values={valuesForHexagram(hexagram)} label={`${hexagram.name}卦象`} /><HexagramTextBlock sequence={sequence} /></section>
       <section className="result-section detail-lines-section"><div className="section-heading"><div><div className="eyebrow">TEXT / LINES</div><h2>六爻爻辭</h2></div><span>初爻至上爻</span></div><p className="section-intro">依初爻至上爻排列，方便按閱讀順序逐爻查看；內容狀態與來源定位均保留。</p><div className="detail-line-list">{lines.map((line) => <article className="detail-line-card" key={line.position}><div><span className="card-label">第 {line.position} 爻</span><h3>{line.name}</h3></div><div className="detail-line-copy"><p>{line.text}</p><p><strong>小象</strong>{line.xiaoxiang || '尚待人工校訂。'}</p><p><strong>注</strong>{line.commentary || '尚待人工校訂。'}</p></div><small>內容狀態：{line.reviewStatus} · 來源第 {line.sourceRef.sourceLine} 行</small></article>)}</div></section>
       <nav className="detail-pagination" aria-label="六十四卦前後導覽"><button className="button button-secondary" type="button" disabled={!previous} onClick={() => previous && onNavigate(previous.sequence)}>← {previous ? `${previous.sequence}. ${previous.name}卦` : '已是第一卦'}</button><span>第 {sequence}／64 卦</span><button className="button button-secondary" type="button" disabled={!next} onClick={() => next && onNavigate(next.sequence)}>{next ? `${next.sequence}. ${next.name}卦` : '已是最後一卦'} →</button></nav>
     </main>
@@ -464,7 +544,7 @@ function readStoredQuestion(): string {
   }
 }
 
-type RouteState = { view: View; sequence?: number }
+type RouteState = { view: View; sequence?: number; research?: ResearchSeed }
 
 function readHashRoute(): RouteState | null {
   if (typeof window === 'undefined') return null
@@ -474,6 +554,21 @@ function readHashRoute(): RouteState | null {
     const sequence = Number(detailMatch[1])
     return HEXAGRAMS.some((hexagram) => hexagram.sequence === sequence) ? { view: 'hexagram-detail', sequence } : null
   }
+  if (hash === '#/research' || hash.startsWith('#/research?')) {
+    const query = hash.split('?')[1] ?? ''
+    const params = new URLSearchParams(query)
+    const hexagramSequence = Number(params.get('hexagram'))
+    const linePosition = Number(params.get('line'))
+    const changedSequence = Number(params.get('changed'))
+    const lineValue = Number(params.get('value'))
+    const research: ResearchSeed = {
+      ...(HEXAGRAMS.some((hexagram) => hexagram.sequence === hexagramSequence) ? { hexagramSequence } : {}),
+      ...(linePosition >= 1 && linePosition <= 6 ? { linePosition } : {}),
+      ...(HEXAGRAMS.some((hexagram) => hexagram.sequence === changedSequence) ? { changedSequence } : {}),
+      ...(lineValue === 6 || lineValue === 9 ? { lineValue } : {}),
+    }
+    return { view: 'research', research }
+  }
   const routes: Record<string, View> = {
     '#/': 'home',
     '#/setup': 'setup',
@@ -481,13 +576,23 @@ function readHashRoute(): RouteState | null {
     '#/result': 'result',
     '#/hexagrams': 'hexagrams',
     '#/review': 'review',
+    '#/research': 'research',
   }
   const view = routes[hash]
   return view ? { view } : null
 }
 
-function hashForRoute(view: View, sequence?: number): string {
+function hashForRoute(view: View, sequence?: number, research?: ResearchSeed): string {
   if (view === 'hexagram-detail' && sequence) return `#/hexagrams/${sequence}`
+  if (view === 'research') {
+    const params = new URLSearchParams()
+    if (research?.hexagramSequence) params.set('hexagram', String(research.hexagramSequence))
+    if (research?.linePosition) params.set('line', String(research.linePosition))
+    if (research?.changedSequence) params.set('changed', String(research.changedSequence))
+    if (research?.lineValue) params.set('value', String(research.lineValue))
+    const query = params.toString()
+    return `#/research${query ? `?${query}` : ''}`
+  }
   if (view === 'home') return '#/'
   return `#/${view}`
 }
@@ -497,6 +602,7 @@ function App() {
   const initialRoute = readHashRoute()
   const [view, setView] = useState<View>(() => initialRoute?.view ?? (initialCast ? (initialCast.completed ? 'result' : 'cast') : 'home'))
   const [selectedSequence, setSelectedSequence] = useState<number | undefined>(() => initialRoute?.sequence)
+  const [researchSeed, setResearchSeed] = useState<ResearchSeed | undefined>(() => initialRoute?.research)
 
   const [question, setQuestion] = useState(() => readStoredQuestion())
   const [cast, setCast] = useState<CastState | null>(initialCast)
@@ -511,10 +617,11 @@ function App() {
     }
   }, [cast, question])
 
-  const navigate = (nextView: View, sequence?: number) => {
+  const navigate = (nextView: View, sequence?: number, research?: ResearchSeed) => {
     setView(nextView)
     setSelectedSequence(sequence)
-    const nextHash = hashForRoute(nextView, sequence)
+    setResearchSeed(research)
+    const nextHash = hashForRoute(nextView, sequence, research)
     if (typeof window !== 'undefined' && window.location.hash !== nextHash) window.history.pushState(null, '', nextHash)
   }
 
@@ -524,6 +631,7 @@ function App() {
       if (!route) return
       setView(route.view)
       setSelectedSequence(route.sequence)
+      setResearchSeed(route.research)
     }
     window.addEventListener('hashchange', onHashChange)
     window.addEventListener('popstate', onHashChange)
@@ -546,6 +654,7 @@ function App() {
   }
 
   const openHexagram = (sequence: number) => navigate('hexagram-detail', sequence)
+  const openResearch = (hexagramSequence: number, linePosition: number, changedSequence: number, lineValue: 6 | 9) => navigate('research', undefined, { hexagramSequence, linePosition, changedSequence, lineValue })
 
   const advance = () => {
     setCast((previous) => previous ? advanceCast(previous) : previous)
@@ -577,9 +686,10 @@ function App() {
       {view === 'home' && <HomeView onStart={() => navigate('setup')} onBrowse={() => navigate('hexagrams')} />}
       {view === 'setup' && <SetupView onStart={startCast} onComplete={completeFromSetup} />}
       {view === 'cast' && cast && <CastView state={cast} onNext={advance} onAuto={autoComplete} onBack={goBack} onRestart={restart} onResult={() => navigate('result')} />}
-      {view === 'result' && cast?.completed && <ResultView state={cast} question={question} onRestart={restart} onBrowse={() => navigate('hexagrams')} onOpenDetail={openHexagram} />}
+      {view === 'result' && cast?.completed && <ResultView state={cast} question={question} onRestart={restart} onBrowse={() => navigate('hexagrams')} onOpenDetail={openHexagram} onResearch={openResearch} />}
       {view === 'hexagrams' && <HexagramsView onOpenDetail={openHexagram} />}
       {view === 'hexagram-detail' && selectedSequence !== undefined && <HexagramDetailView sequence={selectedSequence} onBack={() => navigate('hexagrams')} onNavigate={openHexagram} />}
+      {view === 'research' && <ResearchView key={JSON.stringify(researchSeed ?? {})} seed={researchSeed} onOpenDetail={openHexagram} />}
       {view === 'review' && <ContentReviewView />}
       <footer className="site-footer"><span>觀象／易經研究工具 v0.1</span><span>原文與解釋分層保存 · 未校訂內容不作定稿</span></footer>
     </div>
