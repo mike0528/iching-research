@@ -104,9 +104,12 @@ test.describe('觀象核心使用流程', () => {
 
     await goTo(page, '#/setup')
     await expect(page.locator('.setup-actions .button')).toHaveCount(2)
+    await expect(page.locator('.setup-actions')).toHaveCSS('flex-direction', 'row')
     for (const button of await page.locator('.setup-actions .button').all()) {
-      await expect(button).toHaveCSS('min-height', '48px')
+      await expect(button).toHaveCSS('min-height', '40px')
     }
+    const setupButtonBoxes = await page.locator('.setup-actions .button').evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect().toJSON()))
+    expect(setupButtonBoxes[0].y).toBe(setupButtonBoxes[1].y)
     await page.getByRole('button', { name: /開始第 1 爻/ }).click()
     const operationBox = await page.locator('.operation-panel').boundingBox()
     const asideBox = await page.locator('.cast-aside').boundingBox()
